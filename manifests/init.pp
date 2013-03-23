@@ -46,6 +46,11 @@ class ruby {
     require => File["${root}/plugins"]
   }
 
+  repository { "${root}/plugins/rbenv-sudo":
+    source  => 'dcarley/rbenv-sudo',
+    require => File["${root}/plugins"]
+  }
+
   exec { "ensure-rbenv-version-${rbenv_version}":
     command => "${git_fetch} && git reset --hard ${rbenv_version}",
     unless  => "git describe --tags --exact-match `git rev-parse HEAD` | grep ${rbenv_version}",
