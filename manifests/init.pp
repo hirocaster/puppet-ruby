@@ -24,10 +24,6 @@ class ruby {
     ]:
       ensure  => directory,
       require => Exec['rbenv-setup-root-repo'];
-    "${root}/rbenv.d/install/00_try_to_download_ruby_version.bash":
-      ensure => present,
-      mode   => '0755',
-      source => 'puppet:///modules/ruby/try_to_download_ruby_version.bash';
     "${boxen::config::envdir}/rbenv.sh":
       source => 'puppet:///modules/ruby/rbenv.sh' ;
   }
