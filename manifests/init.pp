@@ -34,8 +34,6 @@ class ruby(
     ]:
       ensure  => directory,
       require => Exec['rbenv-setup-root-repo'];
-    "${boxen::config::envdir}/rbenv.sh":
-      source => 'puppet:///modules/ruby/rbenv.sh' ;
   }
 
   $_real_rbenv_plugins = merge($ruby::params::rbenv_plugins, $rbenv_plugins)
