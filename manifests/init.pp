@@ -37,8 +37,8 @@ class ruby(
 
   }
 
-  $_real_rbenv_plugins = merge($ruby::params::rbenv_plugins, $rbenv_plugins)
-  create_resources('ruby::plugin', $_real_rbenv_plugins)
+  # $_real_rbenv_plugins = merge($ruby::params::rbenv_plugins, $rbenv_plugins)
+  # create_resources('ruby::plugin', $_real_rbenv_plugins)
 
 
   if has_key($_real_rbenv_plugins, 'rbenv-default-gems') {
