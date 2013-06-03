@@ -35,9 +35,6 @@ class ruby(
       ensure  => directory,
       require => Repository[$rbenv_root];
 
-    "${rbenv_root}/rbenv.d/install/00_try_to_download_ruby_version.bash":
-      mode   => '0755',
-      source => 'puppet:///modules/ruby/try_to_download_ruby_version.bash';
   }
 
   $_real_rbenv_plugins = merge($ruby::params::rbenv_plugins, $rbenv_plugins)
