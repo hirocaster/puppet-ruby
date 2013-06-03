@@ -2,25 +2,35 @@
 #
 # This module installs a full rbenv-driven ruby stack
 #
-class ruby {
-  include boxen::config
-  include homebrew
+class ruby(
+  $default_gems  = $ruby::params::default_gems,
+  $rbenv_plugins = {},
+  $rbenv_version = $ruby::params::rbenv_version,
+  $rbenv_root    = $ruby::params::rbenv_root,
+  $user          = $ruby::params::user
+) inherits ruby::params {
 
-  $root = "${boxen::config::home}/rbenv"
-  $rbenv_version = 'v0.4.0'
-  $ruby_build_version = 'v20130227'
+  if $::osfamily == 'Darwin' {
+    include boxen::config
 
-  package { ['rbenv', 'ruby-build']: ensure => absent; }
+    file { "${boxen::config::envdir}/rbenv.sh":
+      source => 'puppet:///modules/ruby/rbenv.sh' ;
+    }
+  }
+
+  repository { $rbenv_root:
+    ensure => $rbenv_version,
+    source => 'sstephenson/rbenv',
+    user   => $user
+  }
 
   file {
-    $root:
-      ensure => directory;
     [
-      "${root}/plugins",
-      "${root}/rbenv.d",
-      "${root}/rbenv.d/install",
-      "${root}/shims",
-      "${root}/versions",
+      "${rbenv_root}/plugins",
+      "${rbenv_root}/rbenv.d",
+      "${rbenv_root}/rbenv.d/install",
+      "${rbenv_root}/shims",
+      "${rbenv_root}/versions",
     ]:
       ensure  => directory,
       require => Exec['rbenv-setup-root-repo'];
@@ -28,23 +38,9 @@ class ruby {
       source => 'puppet:///modules/ruby/rbenv.sh' ;
   }
 
-  $git_init   = 'git init .'
-  $git_remote = 'git remote add origin https://github.com/sstephenson/rbenv.git'
-  $git_fetch  = 'git fetch -q origin'
-  $git_reset  = "git reset --hard ${rbenv_version}"
+  $_real_rbenv_plugins = merge($ruby::params::rbenv_plugins, $rbenv_plugins)
+  create_resources('ruby::plugin', $_real_rbenv_plugins)
 
-  exec { 'rbenv-setup-root-repo':
-    command => "${git_init} && ${git_remote} && ${git_fetch} && ${git_reset}",
-    cwd     => $root,
-    creates => "${root}/bin/rbenv",
-    require => [ File[$root], Class['git'] ]
-  }
-
-  repository { "${root}/plugins/ruby-build":
-    source  => 'sstephenson/ruby-build',
-    extra   => "-b ${ruby_build_version}",
-    require => File["${root}/plugins"]
-  }
 
   repository { "${root}/plugins/rbenv-sudo":
     source  => 'dcarley/rbenv-sudo',
@@ -64,12 +60,18 @@ class ruby {
     require => Exec["ensure-rbenv-version-${rbenv_version}"],
   }
 
-  exec { "ensure-ruby-build-version-${ruby_build_version}":
-    command => "${git_fetch} && git reset --hard ${ruby_build_version}",
-    unless  => "git describe --tags --exact-match `git rev-parse HEAD` | grep ${ruby_build_version}",
-    cwd     => "${root}/plugins/ruby-build",
-    require => Repository["${root}/plugins/ruby-build"],
+  if has_key($_real_rbenv_plugins, 'rbenv-default-gems') {
+    $gem_list = join($default_gems, "\n")
+
+    file { "${rbenv_root}/default-gems":
+      content => "${gem_list}\n",
+      tag     => 'ruby_plugin_config'
+    }
   }
 
-  Ruby::Definition <| |> -> Ruby::Version <| |>
+  Repository[$rbenv_root] ->
+    File <| tag == 'ruby_plugin_config' |> ->
+    Ruby::Plugin <| |> ->
+    Ruby::Definition <| |> ->
+    Ruby::Version <| |>
 }

@@ -1,19 +1,18 @@
 # Installs a ruby version via rbenv.
-# Takes cc, ensure, conf_opts, and version params.
+# Takes ensure, env, and version params.
 #
 # Usage:
 #
 #     ruby::version { '1.9.3-p194': }
 
 define ruby::version(
-  $cc        = '/usr/bin/cc',
-  $ensure    = 'installed',
-  $conf_opts = undef,
-  $version   = $name
+  $ensure  = 'installed',
+  $env     = {},
+  $version = $name
 ) {
   require ruby
 
-  $dest = "${ruby::root}/versions/${version}"
+  $dest = "${ruby::rbenv_root}/versions/${version}"
 
   if $ensure == 'absent' {
     file { $dest:
@@ -21,37 +20,22 @@ define ruby::version(
       force  => true
     }
   } else {
-    $env = $conf_opts ? {
-      undef   => [
-        "CC=${cc}",
-        "RBENV_ROOT=${ruby::root}"
-      ],
-      default => [
-        "CC=${cc}",
-        "RBENV_ROOT=${ruby::root}",
-        "CONFIGURE_OPTS=${conf_opts}"
-      ],
+    $default_env = {
+      'CC'         => '/usr/bin/cc',
+      'RBENV_ROOT' => $ruby::rbenv_root
     }
 
     exec { "ruby-install-${version}":
-      command     => "${ruby::root}/bin/rbenv install ${version}",
-      cwd         => "${ruby::root}/versions",
+      command     => "${ruby::rbenv_root}/bin/rbenv install ${version}",
+      cwd         => "${ruby::rbenv_root}/versions",
       provider    => 'shell',
       timeout     => 0,
-      creates     => $dest
+      creates     => $dest,
+      user        => $ruby::user,
     }
 
-    Exec["ruby-install-${version}"] { environment +> $env }
-
-    ruby::gem {
-      "bundler for ${version}":
-        gem     => 'bundler',
-        ruby    => $version,
-        version => '~> 1.3';
-
-      "rbenv-autohash for ${version}":
-        gem  => 'rbenv-autohash',
-        ruby => $version
+    Exec["ruby-install-${version}"] {
+      environment +> sort(join_keys_to_values(merge($default_env, $env), '='))
     }
   }
 }

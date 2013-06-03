@@ -6,12 +6,13 @@
 
 class ruby::global($version = '1.9.3') {
   if $version != 'system' {
-    require join(['ruby', join(split($version, '[.-]'), '_')], '::')
+    $klass = join(['ruby', join(split($version, '[.-]'), '_')], '::')
+    require $klass
   }
 
-  file { "${ruby::root}/version":
+  file { "${ruby::rbenv_root}/version":
     ensure  => present,
-    owner   => $::boxen_user,
+    owner   => $ruby::user,
     mode    => '0644',
     content => "${version}\n",
   }
